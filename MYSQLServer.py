@@ -1,73 +1,40 @@
-#!/usr/bin/env python3
-"""
-MySQLServer.py
-Creates the MySQL database `alx_book_store` if it does not already exist.
+import mysql.connector
+from mysql.connector import errorcode
 
-- No SELECT/SHOW statements used.
-- Prints a success message when created (or already present).
-- Prints clear error messages if connection/execution fails.
-- Properly opens and closes DB resources.
-"""
+# Define database connection parameters
+config = {
+    'user': 'your_user',        # Replace with your MySQL username
+    'password': 'your_password',    # Replace with your MySQL password
+    'host': '127.0.0.1'       # Replace with your MySQL host, often 'localhost' or '127.0.0.1'
+}
 
-import os
-import sys
+DATABASE_NAME = 'alx_book_store'
 
-DB_NAME = "alx_book_store"
-
-try:
-    import mysql.connector  # pip install mysql-connector-python
-    from mysql.connector import Error as MySQLError
-except Exception:
-    print("Error: mysql-connector-python is not installed. Install it with:")
-    print("  pip install mysql-connector-python")
-    sys.exit(1)
-
-
-def main():
-    host = os.getenv("DB_HOST", "localhost")
-    user = os.getenv("DB_USER", "root")
-    password = os.getenv("DB_PASS", "")
-    port = int(os.getenv("DB_PORT", "3306"))
-
-    conn = None
-    cursor = None
+def create_database():
+    """Creates the 'alx_book_store' database if it doesn't exist."""
     try:
-        # Connect without selecting a database
-        conn = mysql.connector.connect(
-            host=host, user=user, password=password, port=port
-        )
-        conn.autocommit = True  # ensure CREATE DATABASE is applied immediately
+        # Establish a connection to the MySQL server
+        cnx = mysql.connector.connect(**config)
+        cursor = cnx.cursor()
+        
+        # Use an IF NOT EXISTS clause to prevent failure if the database already exists
+        cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DATABASE_NAME}")
 
-        cursor = conn.cursor()
-        # No SELECT/SHOW, and won't fail if DB exists
-        cursor.execute(
-            f"CREATE DATABASE IF NOT EXISTS `{DB_NAME}` "
-            "DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
-        )
+        print(f"Database '{DATABASE_NAME}' created successfully!")
 
-        print(f"Database '{DB_NAME}' created successfully!")
-
-    except MySQLError as e:
-        print("Failed to connect to MySQL or create the database.")
-        print(f"MySQL Error: {e}")
-        sys.exit(1)
-    except Exception as e:
-        print("An unexpected error occurred.")
-        print(f"Error: {e}")
-        sys.exit(1)
+    except mysql.connector.Error as err:
+        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+            print("Something is wrong with your user name or password")
+        elif err.errno == errorcode.ER_BAD_DB_ERROR:
+            print("Database does not exist")
+        else:
+            print(f"Error: {err}")
     finally:
-        # Clean close
-        try:
-            if cursor is not None:
-                cursor.close()
-        except Exception:
-            pass
-        try:
-            if conn is not None and conn.is_connected():
-                conn.close()
-        except Exception:
-            pass
+        # Close the cursor and connection
+        if 'cursor' in locals() and cursor:
+            cursor.close()
+        if 'cnx' in locals() and cnx:
+            cnx.close()
 
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    create_database()
